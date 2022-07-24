@@ -1,8 +1,8 @@
 import React, {PropsWithChildren} from "react";
-import {CellData, CellState} from "../types/CellData";
+import {CellData, CellState, GetVisitor} from "../types/CellData";
 
 type Props = PropsWithChildren<CellData> & {
-    onClick: () => {}
+    onClick: () => Promise<void>
 }
 
 export const Cell = (props: Props) => {

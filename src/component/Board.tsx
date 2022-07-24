@@ -3,88 +3,96 @@ import {CellData, CellImpl, CellState} from "../types/CellData";
 import {Cell} from "./Cell";
 import {Typography} from "@mui/material";
 import {Turn} from "../types/Turn";
+import {directionCheck} from "../types/DirectionCheck";
 
 export const Board = () => {
     const [turn, setTurn] = useState<Turn>(Turn.WHITE)
-    const [cell, setCell] = useState<CellImpl>()
-    const [cells, setCells] = useState<CellData[][]>();
-    useEffect(() => {
+
+    const [maxX, setMaxX] = useState(7)
+    const [maxY, setMaxY] = useState(7)
+    const [minX, setMinX] = useState(0)
+    const [minY, setMinY] = useState(0)
+    const [cells, setCells] = useState<CellData[]>(() => {
+        const cells = [] as CellData[]
+        const startX = ((maxX + 1) / 2) - 1
+        const startY = ((maxY + 1) / 2) - 1
+
+        cells.push(new CellImpl(startX, startY, true, CellState.WHITE))
+        cells.push(new CellImpl(startX + 1, startY, true, CellState.BLACK))
+        cells.push(new CellImpl(startX, startY + 1, true, CellState.BLACK))
+        cells.push(new CellImpl(startX + 1, startY + 1, true, CellState.WHITE))
+        return cells
+    });
+
+    function addCell(row: number, column: number, state: CellState) {
+        console.log(`add input(${row}, ${column}), ${state}`)
+        let added = false
         setCells(cells => {
-            cells = [] as CellData[][]
-            for (let row = 0; row < 8; row++) {
-                const rows = Array<CellData>(8)
-                for (let col = 0; col < 8; col++) {
-                    rows[col] = {
-                        row: row,
-                        col: col,
-                        exists: false,
-                        state: CellState.NONE
-                    } as CellData
-                }
-                cells.push(rows)
+
+            // 最大値超過チェック
+            if (maxY < row || row < minY) {
+                return cells
             }
-            cells[3][3] = {...cells[3][3], state: CellState.WHITE, exists: true}
-            cells[3][4] = {...cells[3][4], state: CellState.BLACK, exists: true}
-            cells[4][3] = {...cells[4][3], state: CellState.BLACK, exists: true}
-            cells[4][4] = {...cells[4][4], state: CellState.WHITE, exists: true}
 
-            console.log(`cells:`, cells)
-            const cell3x3 = new CellImpl(
-                3, 3, true, CellState.WHITE
-            )
-            console.log(`cell3x3`, cell3x3.get(3, 3))
-            const cell3x4 = new CellImpl(
-                3, 4, true, CellState.BLACK
-            )
-            const cell4x3 = new CellImpl(
-                4, 3, true, CellState.BLACK
-            )
-            const cell4x4 = new CellImpl(
-                4, 4, true, CellState.WHITE
-            )
-            cell3x3.cell_6 = cell3x4
-            cell3x3.cell_8 = cell4x3
-            cell3x3.cell_9 = cell4x4
-            cell3x4.cell_4 = cell3x3
-            cell3x4.cell_7 = cell4x3
-            cell3x4.cell_8 = cell4x4
-            cell4x3.cell_2 = cell3x3
-            cell4x3.cell_3 = cell3x4
-            cell4x3.cell_6 = cell4x4
-            cell4x4.cell_1 = cell3x3
-            cell4x4.cell_2 = cell3x4
-            cell4x4.cell_4 = cell4x3
-            setCell(cell3x3)
-            return cells
-        })
-    }, [])
+            // 配置可能チェック
+            /*
+             8方向に対する配置可能チェックを行う。
+             */
+            const cell = new CellImpl(row, column, true, state)
+            const directionCheckResult = directionCheck(cells, cell)
 
-    function onClickFunction(row: number, col: number) {
-        if (!cells)
-            return
-        const cellOfArray = cells[row][col]
-        console.log(`clicked cell`, cellOfArray)
+            console.log(directionCheckResult)
+            // 塗り替え処理
+            const newCells = cells.flatMap((c, i) => {
+                const cChanged = directionCheckResult.map(result => {
+                    let changed = false
+                    if (result.reversibleIndexes.includes(i)) {
+                        c.state = state
+                        changed = true
+                        added = true
+                    }
+                    return {...c, changed: changed}
+                }).find(c => c.changed)
+                return cChanged ? cChanged : c
+            })
+            if (!added) {
+                return cells
+            }
 
-        const clickedCell = cell?.get(row, col)
-        if (!clickedCell) {
-            console.log("未配置セル", clickedCell)
-
-            clickedCell?.check(1, turn)
-        }
-
-        if (true) {
+            newCells.push(cell)
             setTurn(prevState => prevState == Turn.BLACK ? Turn.WHITE : Turn.BLACK)
-        } else {
-            alert("無効なセルです。")
-        }
+
+            return newCells
+        })
     }
 
-    return <>
-        <Typography>{turn === 0 ? "BLACK" : "WHITE"} of Turn</Typography>
-        <div style={{display: "grid", gridTemplateColumns: "repeat(8, 1fr)", border: "thin"}}>
+    function onClickFunction(row: number, col: number) {
+        const clickedCell = cells.find(c => c.row == row && c.col == col)
+        if (!clickedCell) {
+            console.log("未配置セル", clickedCell)
+        }
 
-            {cells?.map(rows => rows.map(cell => <Cell {...cell}
-                                                       onClick={async () => onClickFunction(cell.row, cell.col)}/>))}
+        // test
+        addCell(row, col, turn == Turn.WHITE ? CellState.WHITE : CellState.BLACK)
+    }
+
+    console.log(`board drawing.`)
+
+    return <>
+        <Typography>{turn === Turn.BLACK ? "BLACK" : "WHITE"} of Turn</Typography>
+        <div style={{display: "grid", gridTemplateColumns: `repeat(${maxY + 1}, 1fr)`, border: "thin"}}>
+            {[...Array(maxX + 1).keys()].flatMap(row => {
+                return [...Array(maxY + 1).keys()].map(col => {
+                    const key = `cell_${row}_${col}`
+                    const cell = cells.find(c => c.row == row && c.col == col)
+                    if (!cell) {
+                        const newCell: CellData = new CellImpl(row, col, false, CellState.NONE)
+                        return <Cell key={key} {...newCell} onClick={async () => onClickFunction(row, col)}/>
+                    }
+
+                    return <Cell key={key} {...cell} onClick={async () => onClickFunction(row, col)}/>
+                })
+            })}
         </div>
     </>
 }
