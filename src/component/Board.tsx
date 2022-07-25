@@ -39,6 +39,9 @@ export const Board = () => {
              8方向に対する配置可能チェックを行う。
              */
             const cell = new CellImpl(row, column, true, state)
+            if(cells.find(c=>c.row===row&& c.col===column)){
+                return cells
+            }
             const directionCheckResult = directionCheck(cells, cell)
 
             console.log(directionCheckResult)
@@ -80,7 +83,9 @@ export const Board = () => {
 
     return <>
         <Typography>{turn === Turn.BLACK ? "BLACK" : "WHITE"} of Turn</Typography>
-        <div style={{display: "grid", gridTemplateColumns: `repeat(${maxY + 1}, 1fr)`, border: "thin"}}>
+        <div style={{
+            display: "grid", gridTemplateColumns: `repeat(${maxY + 1}, 1fr)`, border: "thin"
+        }}>
             {[...Array(maxX + 1).keys()].flatMap(row => {
                 return [...Array(maxY + 1).keys()].map(col => {
                     const key = `cell_${row}_${col}`

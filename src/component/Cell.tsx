@@ -17,7 +17,13 @@ export const Cell = (props: Props) => {
         default:
     }
 
-    return <div style={{border: "solid 1px", textAlign: "center"}} onClick={props.onClick}>
-        {props.exists ? value : "　"}
+    return <div style={{
+        border: "solid 1px",
+        fontSize: "48px", display: "flex",
+        alignItems: "center"
+    }} onClick={props.onClick}>
+        <div style={{width: "100%", textAlign: "center"}}>
+            {props.exists ? value : "　"}
+        </div>
     </div>
 }

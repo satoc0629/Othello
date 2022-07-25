@@ -5,7 +5,7 @@ import {Board} from "./component/Board";
 
 function App() {
 
-    return <Container maxWidth="sm">
+    return <Container maxWidth="md">
         <Paper elevation={3}>
             <Typography variant={"h1"}>
                 Othello
